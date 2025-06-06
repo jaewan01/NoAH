@@ -14,7 +14,7 @@ NoAH utilizes the core–fringe node hierarchy to model hyperedge formation as a
 Moreover, we propose NoAHFIT to fit real-world hypergraphs by estimating the parameters of NOAH. 
 Through experiments on nine datasets across four different domains, we demonstrate that NoAH with NoAHFIT outperforms eight baseline hypergraph generative models in accurately capturing the structure-attribute interplay present in real-world hypergraphs.
 
-## __Datasets and Settings__
+## __Datasets__
 We provide the code for NoAH. We provide the information on the datasets used in the experiment below.
 
 |Dataset|Cores|Fringes|Nodes|Hyperedges|Attribute Dimension|

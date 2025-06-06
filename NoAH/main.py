@@ -10,10 +10,10 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
     
     fix_seed(seed)
     
+    print(mode)
     if mode == "NoAH":
         # Step 1. Read target hypergraph and split a node set into core and fringes.
         hyperedges, attributes, n, m, k = prep_dataset(target)
-        attributes[attributes > 0.] = 1.
 
         if os.path.exists(f"core-fringe-split/{target}/{iter}"):
             with open(f"core-fringe-split/{target}/{iter}/cores.txt", "r") as f:
@@ -36,10 +36,11 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
         nc = len(cores)
         nf = len(fringes)
 
-        print(f'Target Hypergraph Info: {target}, nc: {nc}, nf: {nf}, m: {m}, k: {k}')
+        print(f'Target Hypergraph: {target}, nc: {nc}, nf: {nf}, m: {m}, k: {k}')
             
         # Step 2. Estimate seed_prob & theta_c by core group construction.
         Fc = attributes[cores]
+
         if os.path.exists(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt"):
             seed_prob = torch.load(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
             theta_c = torch.load(f"./parameters/{target}/{mode}/Tc-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
@@ -56,6 +57,7 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
         
         # Step 3. Estimate theta_f by fringe attachment.
         Ff = attributes[fringes]
+
         if os.path.exists(f"./parameters/{target}/{mode}/Tf-{iter}-{epoch}-{lr_f}-{w_d}-{w_s}-{seed}.pt"):
             theta_f = torch.load(f"./parameters/{target}/{mode}/Tf-{iter}-{epoch}-{lr_f}-{w_d}-{w_s}-{seed}.pt")
         else:
@@ -78,12 +80,11 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
         os.makedirs(f"./parameters/{target}/{mode}", exist_ok=True)
         torch.save(theta_f, f"./parameters/{target}/{mode}/Tf-{iter}-{epoch}-{lr_f}-{w_d}-{w_s}-{seed}.pt")
             
-        
         # Step 4. Generate a hypergraph using seed_prob, theta_c, and theta_f.
         hypergraph = NoAH(Fc, Ff, theta_c, theta_f, seed_prob, m, mode).e2n
-        dirname = "noah"
-        os.makedirs(f"../generated/{dirname}/{target}", exist_ok=True)
-        with open(f"../generated/{dirname}/{target}/{dirname}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
+
+        os.makedirs(f"../generated/{mode}/{target}", exist_ok=True)
+        with open(f"../generated/{mode}/{target}/{mode}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
             for hyperedge in hypergraph:
                 cur = []
                 for node in hyperedge:
@@ -92,17 +93,18 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
                     else:
                         cur.append(str(fringes[node - len(cores)]))
                 f.write(",".join(cur) + "\n")
+        
+        reindexing(target, mode)
     
-    elif mode == "Bipartite":
+    elif mode == "NoAH_CF":
         # Step 1. Read target hypergraph.
         hyperedges, attributes, n, m, k = prep_dataset(target)
-        attributes[attributes > 0.] = 1.
-        print(f'Target Hypergraph Info: {target}, n: {n}, m: {m}, k: {k}')
+        print(f'Target Hypergraph: {target}, n: {n}, m: {m}, k: {k}')
         
         # Step2. Estimate seed_prob & theta.
-        if os.path.exists(f"./parameters/{target}/Bipartite/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt"):
-            seed_prob = torch.load(f"./parameters/{target}/Bipartite/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
-            theta = torch.load(f"./parameters/{target}/Bipartite/T-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
+        if os.path.exists(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt"):
+            seed_prob = torch.load(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
+            theta = torch.load(f"./parameters/{target}/{mode}/T-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
         else:
             I = torch.zeros(m, n)
             for edge_idx, nodes in enumerate(hyperedges):
@@ -110,19 +112,23 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
                     I[edge_idx, node] = 1
             lr = lr_c
             theta, seed_prob = NoAHfit_core(I, attributes, epoch, lr, w_d, w_s, n_batch_c, seed, device)
-            os.makedirs(f"./parameters/{target}/Bipartite", exist_ok=True)
-            torch.save(seed_prob, f"./parameters/{target}/Bipartite/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
-            torch.save(theta, f"./parameters/{target}/Bipartite/T-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
+            os.makedirs(f"./parameters/{target}/{mode}", exist_ok=True)
+            torch.save(seed_prob, f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
+            torch.save(theta, f"./parameters/{target}/{mode}/T-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
         
         # Step 3. Generate a hypergraph using seed_prob and theta.
-        hypergraph = Bipartite(attributes, theta, seed_prob, m).e2n
-        os.makedirs(f"../generated/bi/{target}", exist_ok=True)
-        with open(f"../generated/bi/{target}/bi-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
+        hypergraph = NoAH_CF(attributes, theta, seed_prob, m).e2n
+
+
+        os.makedirs(f"../generated/{mode}/{target}", exist_ok=True)
+        with open(f"../generated/{mode}/{target}/{mode}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
             for hyperedge in hypergraph:
                 cur = []
                 for node in hyperedge:
                     cur.append(str(node))
                 f.write(",".join(cur) + "\n")
+
+        reindexing(target, mode)
     
         
 if __name__ == '__main__':
@@ -131,7 +137,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "-target",
         "--target_hypergraph",
-        default='coauth-cora',
+        default='cora_coauth',
         action="store",
         type=str,
         help="Select the target real-world hypergraph."
@@ -140,10 +146,10 @@ if __name__ == '__main__':
     parser.add_argument(
         "-mode",
         "--mode",
-        default='HyperCF',
+        default='NoAH',
         action="store",
         type=str,
-        help="Choose from [HyperCF, No-mixing, Bipartite]."
+        help="Choose from [NoAH, NoAH_CF]."
     )
     
     parser.add_argument(

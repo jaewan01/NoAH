@@ -28,3 +28,22 @@ We provide the code for NoAH. We provide the information on the datasets used in
 |[Yelp Bar](https://www.kaggle.com/datasets/yelp-dataset/yelp-dataset)|625|609|1,234|1,188|15|
 |[Devops](https://archive.org/download/stackexchange)|2,003|3,007|5,010|5,684|429|
 |[Patents](https://archive.org/download/stackexchange)|894|3,564|4,458|4,669|2,170|
+
+## __Requirements__
+
+To run this project, you will need the following Python packages:
+
+| Package         | Version   |
+|----------------|-----------|
+| `networkx`      | 3.1       |
+| `numpy`         | 1.26.4    |
+| `scikit-learn`  | 1.3.2     |
+| `scipy`         | 1.10.1    |
+| `snap-stanford` | 6.0.0     |
+| `torch`         | 2.3.0     |
+| `tqdm`          | 4.65.0    |
+
+You can install them via pip:
+
+```
+pip install -r requirements.txt

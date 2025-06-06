@@ -47,7 +47,7 @@ do
         for ws in ${wsizeset[@]}
         do
             python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -lr_f ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_c} -n_batch_f ${n_batch_f} -device ${device} -mode "NoAH"
-            python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_bip} -device ${device} -mode "Bipartite"
+            python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_bip} -device ${device} -mode "NoAH_CF"
         done
     done
 done

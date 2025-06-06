@@ -52,7 +52,6 @@ pip install -r requirements.txt
 ## __How to Run NoAH__
 1. Run __NoAH/run_cf.sh__, with designated configuration. 
 In particular, you can adjust (1) dataset, (2) seed (random seed), (3) epoch, (4) lr (learning rate), (5) device (CUDA device), (6) wdegreeset (set of degree penalty weight), and (7) wsizeset (set of cardinality penalty weight).
-<br>
-2. Run __generated/run_reindexing.sh__ with the proper dataset adjustment.
-<br>
-3. Run __HypergraphProperty/evaluate.sh__ or __HypergraphProperty/ablation.sh__.
+2. Run __generated/run_reindexing.sh__.
+3. Run __HypergraphProperty/run_topology.sh__, then __HypergraphProperty/run_attribute.sh__.
+4. Run __HypergraphProperty/evaluate.sh__ or __HypergraphProperty/ablation.sh__.

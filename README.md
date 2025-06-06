@@ -31,7 +31,7 @@ We provide the code for NoAH. We provide the information on the datasets used in
 
 ## __Requirements__
 
-To run this project, you will need the following Python packages:
+__NoAH__ and the evaluation codes were run with the following Python packages:
 
 | Package         | Version   |
 |----------------|-----------|

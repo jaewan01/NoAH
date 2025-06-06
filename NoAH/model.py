@@ -72,10 +72,10 @@ class NoAH:
                 self.e2n[num_edge] = core_group
 
 
-class Bipartite:
+class NoAH_CF:
     
     """
-        Bipartite is single step version of HyperCF, so Bipartite does not utilize core-fringe structure and attribute mixing.
+        NoAH_CF is a single step version of NoAH, so it does not utilize core-fringe structure.
     """
     
     def __init__(self, attr, affinity_matrix, seed_prob, edge_num):

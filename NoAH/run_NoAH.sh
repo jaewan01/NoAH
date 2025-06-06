@@ -11,24 +11,6 @@ do
     n_batch_c=0
     n_batch_f=0
     n_batch_bip=0
-    if [[ "$data" == "reviews_bluesmusic" || "$data" == "reviews_madisonrestaurant" || "$data" == "reviews_vegasbar" ]]; then
-    iter=30
-
-    elif [[ "$data" == "contact_workspace" || "$data" == "contact_highschool" ]]; then
-    iter=1
-
-    elif [[ "$data" == "devops_stack" ]]; then
-    iter=30
-    n_batch_bip=5
-    wdegreeset=("10" "100" "1000")
-    wsizeset=("10" "100" "1000")
-
-    elif [[ "$data" == "patents_stack" ]]; then
-    iter=30
-    n_batch_f=4
-    n_batch_bip=15
-    wdegreeset=("10" "100" "1000")
-    wsizeset=("10" "100" "1000")
     
     elif [[ "$data" == "cora_coauth" ]]; then
     iter=50

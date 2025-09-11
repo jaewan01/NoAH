@@ -1,7 +1,11 @@
 # __NoAH__
 This is the official implementation of __NoAH__ (Node Attribute based Hypergraph generator), which is described in the following paper:
 * __Attributed Hypergraph Generation with Realistic Interplay Between Structure and Attributes__
+<br> Jaewan Chun\*, Seokbum Yoon\*, Minyoung Choe, Geon Lee, Kijung Shin
+<br> ICDM 2025
 
+The paper is accessible in the following link:
+* TBA
 ## __Overview__
 In many real-world scenarios, interactions happen in a group-wise manner with multiple entities, and therefore, hypergraphs are a suitable tool to accurately represent such interactions. 
 Hyperedges in real-world hypergraphs are not composed of randomly selected nodes but are instead formed through structured processes. 

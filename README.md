@@ -1,22 +1,26 @@
 # __NoAH__
-This is the official implementation of __NoAH__ (Node Attribute based Hypergraph generator), which is described in the following paper:
-* __Attributed Hypergraph Generation with Realistic Interplay Between Structure and Attributes__
+This is the official implementation of __NoAH__ (Node Attribute based Hypergraph generator), which is described in the following papers:
+* __Attributed Hypergraph Generation with Realistic Interplay Between Structure and Attributes__ (http://arxiv.org/abs/2509.21838)
 <br> Jaewan Chun\*, Seokbum Yoon\*, Minyoung Choe, Geon Lee, Kijung Shin
-<br> ICDM 2025
+<br> ICDM 2025 
 
-The paper is accessible in the following link:
-* http://arxiv.org/abs/2509.21838
+* __From binary to general attributes: attributed hypergraph generation with realistic interplay between structure and attributes__ (https://link.springer.com/article/10.1007/s10115-026-02850-x)
+<br> Jaewan Chun, Seokbum Yoon, Minyoung Choe, Geon Lee, Kijung Shin
+<br> Knowledge and Information Systems
+
 ## __Overview__
 In many real-world scenarios, interactions happen in a group-wise manner with multiple entities, and therefore, hypergraphs are a suitable tool to accurately represent such interactions. 
 Hyperedges in real-world hypergraphs are not composed of randomly selected nodes but are instead formed through structured processes. 
 Consequently, various hypergraph generative models have been proposed to explore fundamental mechanisms underlying hyperedge formation. 
-However, most existing hypergraph generative models do not account for node attributes, which can play a significant role in hyperedge formation.
-As a result, these models fail to reflect the interactions between structure and node attributes.
-<br>
-To address the issue above, we propose NOAH, a stochastic hypergraph generative model for attributed hypergraphs. 
-NOAH utilizes the core–fringe node hierarchy to model hyperedge formation as a series of node attachments and determines attachment probabilities based on node attributes. 
-We further introduce NOAHFIT, a parameter learning procedure that allows NOAH to replicate a given real-world hypergraph. 
-Through experiments on nine datasets across four different domains, we show that NOAH with NOAHFIT more accurately reproduces the structure–attribute interplay observed in the real-world hypergraphs than eight baseline hypergraph generative models, in terms of six metrics.
+However, most existing hypergraph generative models do not account for node attributes, which can play a significant role in hyperedge formation. 
+As a result, these models fail to reflect the interactions between structure and node attributes. 
+
+To address the issue above, we propose NoAH, a stochastic hypergraph generative model for attributed hypergraphs. 
+NoAH utilizes the core–fringe node hierarchy to model hyperedge formation as a series of node attachments and determines attachment probabilities based on node attributes. 
+We further introduce NoAHFit, a parameter learning procedure that fits NoAH to a given real-world hypergraph so that generated hypergraphs reproduce structural and attribute-related patterns. 
+Through experiments on nine datasets across four different domains, we show that NoAH with NoAHFit achieves the best overall average rank among the nine evaluated hypergraph generative models when evaluated across six structure–attribute interplay metrics.
+Moreover, we discuss variants of NoAH for different types of node attributes, including binary, categorical, and continuous attributes. 
+For cases without pre-existing node attributes, we extend NoAH and NoAHFit to jointly learn latent node attributes together with the parameters of NoAH and use the learned attributes for generation.
 
 ## __Datasets__
 We provide the code for NoAH. We provide the information on the datasets used in the experiment below.

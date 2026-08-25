@@ -6,7 +6,7 @@ This is the official implementation of __NoAH__ (Node Attribute based Hypergraph
 
 * __From binary to general attributes: attributed hypergraph generation with realistic interplay between structure and attributes__ (https://link.springer.com/article/10.1007/s10115-026-02850-x)
 <br> Jaewan Chun, Seokbum Yoon, Minyoung Choe, Geon Lee, Kijung Shin
-<br> Knowledge and Information Systems
+<br> Knowledge and Information Systems, 2026
 
 ## __Overview__
 In many real-world scenarios, interactions happen in a group-wise manner with multiple entities, and therefore, hypergraphs are a suitable tool to accurately represent such interactions. 

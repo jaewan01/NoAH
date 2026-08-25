@@ -1073,110 +1073,9 @@ class AttributeWiseMLP(nn.Module):
         return pair_prob_log
 
 
-def _build_neural_bank(model_type, k, hidden_dim):
-    if model_type == "attrwise":
-        return AttributeWiseMLP(k, hidden_dim)
-    if model_type == "fullattr":
-        return FullAttributeMLP(k, hidden_dim)
-    raise ValueError(f"Unknown neural model_type: {model_type}")
+def _build_neural_bank(k, hidden_dim):
+    return AttributeWiseMLP(k, hidden_dim)
 
-
-class FullHypergraphNeural(nn.Module):
-    
-    def __init__(
-        self,
-        Ic,
-        If,
-        Fc,
-        Ff,
-        seed_init,
-        w_d,
-        w_s,
-        device,
-        hidden_dim=8,
-        model_type="fullattr",
-    ):
-        super(FullHypergraphNeural, self).__init__()
-        self.Ic = Ic
-        self.If = If
-        self.m = Ic.shape[0]
-        self.nc, self.k = Fc.shape
-        self.nf = Ff.shape[0]
-        self.c2a = Fc
-        self.f2a = Ff
-        self.seed_prob = nn.Parameter(seed_init)
-        self.model_type = model_type
-        self.core_bank = _build_neural_bank(model_type, self.k, hidden_dim)
-        self.fringe_bank = _build_neural_bank(model_type, self.k, hidden_dim)
-        self.w_d = w_d
-        self.w_s = w_s
-        self.device = device
-
-    def forward(self, edge_split=None):
-        if edge_split is None:
-            cur_Ic = self.Ic
-            cur_If = self.If
-        else:
-            cur_Ic = self.Ic[edge_split]
-            cur_If = self.If[edge_split]
-
-        seed_prob = torch.nn.Softmax(dim=0)(self.seed_prob)
-        criterion = torch.nn.MSELoss()
-
-        Ic_exp_log = torch.zeros_like(cur_Ic).to(self.device)
-        core_group_count = torch.sum(cur_Ic, dim=1, keepdim=True).clamp_min(1.0)
-        core_group_attr = torch.matmul(cur_Ic, self.c2a) / core_group_count
-        loss = torch.tensor(0.0, device=self.device)
-
-        for edge in range(cur_Ic.shape[0]):
-            cur_core_group_mask = cur_Ic[edge, :] == 1
-            cur_core_group_indices = cur_core_group_mask.nonzero(as_tuple=True)[0]
-            cur_other_core_mask = cur_Ic[edge, :] == 0
-
-            cur_seed_probs = seed_prob[cur_core_group_mask]
-            cur_seed_probs_log = torch.log(cur_seed_probs / (torch.sum(cur_seed_probs)))
-
-            cur_core_prob_log = self.core_bank.pair_log_probs(
-                self.c2a[cur_core_group_indices],
-                self.c2a,
-            )
-            cur_core_prob_log[torch.arange(cur_core_group_mask.sum()), cur_core_group_indices] = 0
-            cur_core_prob_log = cur_core_prob_log + cur_seed_probs_log.unsqueeze(-1)
-            cur_core_prob_log = torch.logsumexp(cur_core_prob_log, dim=0)
-
-            loss = loss - torch.sum(cur_core_prob_log[cur_core_group_mask])
-            cur_core_inv_log_others = torch.log1p(-torch.exp(cur_core_prob_log[cur_other_core_mask]))
-            loss = loss - torch.sum(cur_core_inv_log_others)
-
-            Ic_exp_log[edge] = cur_core_prob_log
-
-        degree_exp = torch.exp(torch.logsumexp(Ic_exp_log, dim=0))
-        size_exp = torch.exp(torch.logsumexp(Ic_exp_log, dim=1))
-        degree_exp, _ = torch.sort(degree_exp, descending=True)
-        size_exp, _ = torch.sort(size_exp, descending=True)
-        degree_answer, _ = torch.sort(torch.sum(cur_Ic, dim=0), descending=True)
-        size_answer, _ = torch.sort(torch.sum(cur_Ic, dim=1), descending=True)
-        degree_loss = criterion(degree_exp, degree_answer)
-        size_loss = criterion(size_exp, size_answer)
-        loss = loss + degree_loss * self.w_d + size_loss * self.w_s
-
-        If_exp_log = self.fringe_bank.pair_log_probs(core_group_attr, self.f2a)
-
-        loss_attached = -torch.sum(If_exp_log[cur_If == 1])
-        loss_not_attached = -torch.sum(torch.log1p(-torch.exp(If_exp_log[cur_If == 0])))
-        loss = loss + loss_attached + loss_not_attached
-
-        degree_exp = torch.exp(torch.logsumexp(If_exp_log, dim=0))
-        size_exp = torch.exp(torch.logsumexp(If_exp_log, dim=1))
-        degree_exp, _ = torch.sort(degree_exp, descending=True)
-        size_exp, _ = torch.sort(size_exp, descending=True)
-        degree_answer, _ = torch.sort(torch.sum(cur_If, dim=0), descending=True)
-        size_answer, _ = torch.sort(torch.sum(cur_If, dim=1), descending=True)
-        degree_loss = criterion(degree_exp, degree_answer)
-        size_loss = criterion(size_exp, size_answer)
-        loss = loss + degree_loss * self.w_d + size_loss * self.w_s
-
-        return loss
 
 
 class CoreGroupConstructionNeural(nn.Module):
@@ -1189,8 +1088,7 @@ class CoreGroupConstructionNeural(nn.Module):
         w_d,
         w_s,
         device,
-        hidden_dim=8,
-        model_type="fullattr",
+        hidden_dim=8
     ):
         super(CoreGroupConstructionNeural, self).__init__()
         self.Ic = Ic
@@ -1198,8 +1096,7 @@ class CoreGroupConstructionNeural(nn.Module):
         self.nc, self.k = Fc.shape
         self.c2a = Fc
         self.seed_prob = nn.Parameter(seed_init)
-        self.model_type = model_type
-        self.core_bank = _build_neural_bank(model_type, self.k, hidden_dim)
+        self.core_bank = _build_neural_bank(self.k, hidden_dim)
         self.w_d = w_d
         self.w_s = w_s
         self.device = device
@@ -1253,15 +1150,14 @@ class CoreGroupConstructionNeural(nn.Module):
 
 class FringeAttachmentNeural(nn.Module):
     
-    def __init__(self, If, Ff, Fcg, w_d, w_s, device, hidden_dim=8, model_type="fullattr"):
+    def __init__(self, If, Ff, Fcg, w_d, w_s, device, hidden_dim=8):
         super(FringeAttachmentNeural, self).__init__()
         self.If = If
         self.m = If.shape[0]
         self.nf, self.k = Ff.shape
         self.f2a = Ff
         self.Fcg = Fcg
-        self.model_type = model_type
-        self.fringe_bank = _build_neural_bank(model_type, self.k, hidden_dim)
+        self.fringe_bank = _build_neural_bank(self.k, hidden_dim)
         self.w_d = w_d
         self.w_s = w_s
         self.device = device
@@ -1304,8 +1200,7 @@ def NoAHfit_continuous_neural_core(
     n_batch,
     seed,
     device,
-    hidden_dim=8,
-    model_type="fullattr",
+    hidden_dim=8
 ):
     np.random.seed(seed)
     nc = Ic.shape[1]
@@ -1318,7 +1213,7 @@ def NoAHfit_continuous_neural_core(
 
     Ic = Ic.to(device)
     Fc = torch.FloatTensor(Fc).to(device)
-    model = CoreGroupConstructionNeural(Ic, Fc, seed_init, w_d, w_s, device, hidden_dim, model_type=model_type).to(device)
+    model = CoreGroupConstructionNeural(Ic, Fc, seed_init, w_d, w_s, device, hidden_dim).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     model.train()
@@ -1365,7 +1260,6 @@ def NoAHfit_continuous_neural_core(
             break
 
     core_bank_ckpt = {
-        "model_type": model.model_type,
         "k": model.k,
         "hidden_dim": hidden_dim,
         "state_dict": best_core_state,
@@ -1384,8 +1278,7 @@ def NoAHfit_continuous_neural_fringe(
     n_batch,
     seed,
     device,
-    hidden_dim=8,
-    model_type="fullattr",
+    hidden_dim=8
 ):
     np.random.seed(seed)
 
@@ -1399,8 +1292,7 @@ def NoAHfit_continuous_neural_fringe(
         w_d,
         w_s,
         device,
-        hidden_dim,
-        model_type=model_type,
+        hidden_dim
     ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
@@ -1445,60 +1337,9 @@ def NoAHfit_continuous_neural_fringe(
             break
 
     fringe_bank_ckpt = {
-        "model_type": model.model_type,
         "k": model.k,
         "hidden_dim": hidden_dim,
         "state_dict": best_fringe_state,
     }
     return fringe_bank_ckpt
 
-
-def NoAHfit_continuous_neural(
-    Ic,
-    If,
-    Fc,
-    Ff,
-    epoch,
-    lr,
-    w_d,
-    w_s,
-    n_batch,
-    seed,
-    device,
-    hidden_dim=8,
-    model_type="fullattr",
-):
-    Ic_float = Ic.float() if isinstance(Ic, torch.Tensor) else torch.FloatTensor(Ic)
-    Fc_float = torch.FloatTensor(Fc)
-    core_group_count = torch.sum(Ic_float, dim=1, keepdim=True).clamp_min(1.0)
-    Fcg = torch.matmul(Ic_float, Fc_float) / core_group_count
-
-    core_bank_ckpt, best_seed_prob = NoAHfit_continuous_neural_core(
-        Ic,
-        Fc,
-        epoch,
-        lr,
-        w_d,
-        w_s,
-        n_batch,
-        seed,
-        device,
-        hidden_dim=hidden_dim,
-        model_type=model_type,
-    )
-    fringe_bank_ckpt = NoAHfit_continuous_neural_fringe(
-        If,
-        Ff,
-        Fcg,
-        epoch,
-        lr,
-        w_d,
-        w_s,
-        n_batch,
-        seed,
-        device,
-        hidden_dim=hidden_dim,
-        model_type=model_type,
-    )
-
-    return core_bank_ckpt, fringe_bank_ckpt, best_seed_prob

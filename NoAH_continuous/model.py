@@ -127,7 +127,6 @@ class NoAH_neural:
         self.core_bank.load_state_dict(core_bank_ckpt["state_dict"])
         self.core_bank.eval()
 
-
         self.fringe_bank = AttributeWiseMLP(fringe_bank_ckpt["k"], fringe_bank_ckpt["hidden_dim"])
         self.fringe_bank.load_state_dict(fringe_bank_ckpt["state_dict"])
         self.fringe_bank.eval()

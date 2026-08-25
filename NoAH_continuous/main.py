@@ -186,7 +186,7 @@ def main(
         dirname = "NoAH_neural"
         output_path = f"../generated/{dirname}/{target}/{dirname}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt"
         if not os.path.exists(output_path):
-            hypergraph = NoAH_neural(Fc, Ff, core_mlp_ckpt, fringe_mlp_ckpt, seed_prob, m, mode).e2n
+            hypergraph = NoAH_neural(Fc, Ff, core_mlp_ckpt, fringe_mlp_ckpt, seed_prob, m).e2n
             os.makedirs(f"../generated/{dirname}/{target}", exist_ok=True)
             with open(output_path, "w") as f:
                 for hyperedge in hypergraph:

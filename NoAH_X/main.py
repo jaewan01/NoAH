@@ -69,8 +69,8 @@ def main(target, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, seed, 
 
     # Step 3. Generate hypergraphs for both NoAH_wo_attr variants.
     generation_specs = [
-        ("noah_x", NoAH_X),
-        ("noah_x_plus", NoAH_X_plus),
+        ("NoAH_X", NoAH_X),
+        ("NoAH_X+", NoAH_X_plus),
     ]
 
     for dirname, model_cls in generation_specs:

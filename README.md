@@ -22,6 +22,86 @@ Through experiments on nine datasets across four different domains, we show that
 Moreover, we discuss variants of NoAH for different types of node attributes, including binary, categorical, and continuous attributes. 
 For cases without pre-existing node attributes, we extend NoAH and NoAHFit to jointly learn latent node attributes together with the parameters of NoAH and use the learned attributes for generation.
 
+## Repository layout
+
+| Directory | Purpose | Attributes |
+|---|---|---|
+| `NoAH/` | NoAH, NoAHFit, and core–fringe ablations | Binary |
+| `NoAH_categorical/` | Generalized categorical affinities | Categorical |
+| `NoAH_continuous/` | Bilinear and neural affinity variants | Continuous |
+| `NoAH_X/` | NoAHFit-X, NoAH-X, and NoAH-X+ | None provided |
+| `metric/` | Structure–attribute interplay evaluation | Binary |
+| `dataset/` | Input hypergraphs and attributes | — |
+| `generated/` | Stroing generated hypergraphs and reindexing utility | — |
+
+## Running the models
+
+The shell scripts contain dataset-specific defaults for recovery iterations and fitting batches. Edit the configuration block at the top of a script before running a full experiment.
+
+### Binary attributes
+
+```bash
+cd NoAH
+bash run_NoAH.sh
+```
+
+The script runs the proposed model and two ablations over degree- and cardinality-loss weight grids:
+
+- `NoAH`: proposed method with a UMHS-based core–fringe split.
+- `NoAH-dCF`: same model with degree-based core selection.
+- `NoAH_noCF`: no core–fringe distinction.
+
+### Categorical attributes
+
+```bash
+cd NoAH_categorical
+bash run_NoAH_categorical.sh
+```
+
+This reads `attribute_categorical.txt` and `attribute_categorical_counts.txt`.
+
+### Continuous attributes
+
+```bash
+cd NoAH_continuous
+bash run_NoAH_continuous.sh  # bilinear affinities
+bash run_NoAH_neural.sh      # neural affinities
+```
+
+These use the PubMed TF-IDF vectors in `dataset/pubmed_cite/attribute_raw.txt`. 
+
+### No pre-existing attributes
+
+```bash
+cd NoAH_X
+bash run_NoAH_X.sh
+```
+
+One run produces outputs for both NoAH-X and NoAH-X+. Set `k` in the script, or pass `-k`, to choose the latent dimension. 
+
+## Data format
+
+Store each dataset in `dataset/<name>/`. Node IDs must be zero-based contiguous integers, as they index attribute rows.
+
+- `hyperedge.txt`: one comma-separated hyperedge per line, e.g. `0,1,4`.
+- `attribute.txt`: one comma-separated binary vector per node, in node-ID order.
+- `attribute_categorical.txt`: one integer-valued vector per node.
+- `attribute_categorical_counts.txt`: category counts by dimension, e.g. `3,2,4`.
+- `attribute_raw.txt`: one real-valued vector per node; the continuous loader normalizes each dimension to `[0,1]`.
+
+Only the files required by the selected model need to be present.
+
+## Outputs
+
+Generated hypergraphs are written to `generated/<model>/<dataset>/` as `.txt` files with one comma-separated hyperedge per line. Parameters and seeds are encoded in filenames. Attribute-aware reindexing may also create an `-indices.txt` mapping from generated row indices to original node IDs.
+
+The binary implementation reindexes automatically. For other `*-preindexing.txt` outputs, configure and run:
+
+```bash
+cd generated
+bash run_reindexing.sh
+```
+
 ## __Datasets__
 We provide the code for NoAH. We provide the information on the datasets used in the experiment below.
 
@@ -57,7 +137,26 @@ You can install them via pip:
 pip install -r requirements.txt
 ```
 
-## __How to Run NoAH__
-1. Run __NoAH/run_NoAH.sh__, with designated configuration. 
-In particular, you can adjust (1) dataset, (2) seed (random seed), (3) epoch, (4) lr (learning rate), (5) device (CUDA device), (6) wdegreeset (set of degree penalty weight), and (7) wsizeset (set of cardinality penalty weight).
-2. Run __metric/run_metric.sh__.
+## __Citation__
+If you find this work useful, please consider citing:
+```
+@INPROCEEDINGS{11391927,
+  author={Chun, Jaewan and Yoon, Seokbum and Choe, Minyoung and Lee, Geon and Shin, Kijung},
+  booktitle={ICDM}, 
+  title={Attributed Hypergraph Generation with Realistic Interplay Between Structure and Attributes}, 
+  year={2025},
+  pages={189-198},
+  doi={10.1109/ICDM65498.2025.00026}
+}
+
+@article{chun2026binary,
+  title={From binary to general attributes: attributed hypergraph generation with realistic interplay between structure and attributes},
+  author={Chun, Jaewan and Yoon, Seokbum and Choe, Minyoung and Lee, Geon and Shin, Kijung},
+  journal={Knowledge and Information Systems},
+  volume={68},
+  number={1},
+  pages={245},
+  year={2026},
+  publisher={Springer}
+}
+```

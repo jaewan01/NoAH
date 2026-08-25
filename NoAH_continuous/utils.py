@@ -15,43 +15,6 @@ def fix_seed(seed):
     torch.manual_seed(seed)
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = True
-    
- 
-def prep_dataset(data_name):
-    
-    """
-        Dataset Organization
-        |__ dataset/"dataset_name"/                   
-            |__ hyperedge.txt : Contains list of hyperedges. Each hyperedge is consists of nodes seperated by ",".
-            |__ attribute.txt : Contains list of binary node attribute vectors. i-th line indicates node i's attribute. Each attribute vector is consists of attributes seperated by ",". 
-            
-        Read hypergraph infomation from hyperedge.txt & attribute.txt, and return hyperedges, node attributes, number of nodes, number of hyperedges, and dimension of node attribute.
-    """
-    
-    path = "../dataset/" + data_name + "/"
-
-    nodes = set()
-    hyperedges = []
-    
-    with open(path + "hyperedge.txt", "r") as f:
-        for line in f.readlines():
-            cur_line = line.strip().split(",")
-            nodes.update([int(i) for i in cur_line])
-            hyperedges.append([int(i) for i in cur_line])
-            
-    num_nodes = len(nodes)
-    num_edges = len(hyperedges)
-    attributes = []
-    
-    with open(path + "attribute.txt", "r") as f:
-        for line in f.readlines():
-            cur_line = line.strip().split(",")
-            attributes.append([float(i) for i in cur_line])
-    
-    attributes = torch.tensor(attributes)
-    attr_dim = attributes.shape[1]
-            
-    return hyperedges, attributes, num_nodes, num_edges, attr_dim
 
 def prep_dataset_raw_attr(data_name):
     
@@ -96,7 +59,7 @@ def UMHS(data_name, iter):
     """
     
     cores = set()
-    hyperedges, _, n, m, _ = prep_dataset(data_name)
+    hyperedges, _, n, m, _ = prep_dataset_raw_attr(data_name)
     
     for _ in trange(iter, desc="UMHS core-fringe split " + data_name):
         # 1. Shuffle the index of hyperedges.

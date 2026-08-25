@@ -1,0 +1,67 @@
+import torch
+import tqdm
+
+class NoAH_cat:
+    
+    """
+        NoAH is a model which generates a hypergraph soley based on node attributes.
+        
+        step 1. Construct core group using core node attributes, seed core probability, and core affinity matrix.
+        step 2. Mix the node attributes within each core group to generate the attribute of core group.
+        step 3. Construct hyperedge by attaching fringe nodes to core groups using fringe node attributes, core group attributes, and fringe affinity matrix.  
+    """
+    
+    def __init__(self, core_attr, fringe_attr, core_affinity_matrix, fringe_affinity_matrix, seed_prob, edge_num, cat_cnts=None):
+        self.nc = core_attr.shape[0]
+        self.nf = fringe_attr.shape[0]
+        self.n = self.nc + self.nf
+        self.c2a = core_attr
+        self.f2a = fringe_attr
+        self.m = edge_num
+        self.k = core_attr.shape[1]
+        self.Tc = core_affinity_matrix
+        self.Tf = fringe_affinity_matrix
+        self.seed_prob = seed_prob
+        self.e2n = [[] for _ in range(self.m)]
+        self.cat_cnts = cat_cnts
+        self.construct_hypergraph()
+   
+    def construct_hypergraph(self):
+        core_core_probs = torch.ones((self.nc, self.nc))
+
+        for i in range(self.k):
+            core_core_probs *= self.Tc[i][self.c2a[:, i]][:,self.c2a[:, i]]
+
+        core_core_probs.fill_diagonal_(0)
+
+        for num_edge in tqdm.trange(self.m):
+            core_seed = torch.multinomial(self.seed_prob, 1).item()
+            core_group = [core_seed]
+
+            cur_core_probs = core_core_probs[core_seed]
+            cur_attached_cores = torch.bernoulli(cur_core_probs).to(torch.int)
+            cur_attached_cores = torch.nonzero(cur_attached_cores).squeeze().tolist()
+
+            if isinstance(cur_attached_cores, int): 
+                cur_attached_cores = [cur_attached_cores]
+            if len(cur_attached_cores) > 0:
+                core_group.extend(cur_attached_cores)
+
+            cur_fringe_probs = torch.ones(self.nf)
+            for i in range(self.k):
+                cg2a_i = self.c2a[core_group, i]
+                counts = torch.bincount(cg2a_i, minlength=self.cat_cnts[i]).float()
+                probs = counts / torch.sum(counts)
+                edge_attr_i = torch.multinomial(probs, self.nf, replacement=True)
+                cur_fringe_probs *= self.Tf[i][edge_attr_i, self.f2a[:, i]]
+
+            cur_attached_fringes = torch.bernoulli(cur_fringe_probs).to(torch.int)
+            cur_attached_fringes = torch.nonzero(cur_attached_fringes).squeeze().tolist()
+
+            if isinstance(cur_attached_fringes, int):
+                cur_attached_fringes = [cur_attached_fringes]
+            if len(cur_attached_fringes) > 0:
+                self.e2n[num_edge] = core_group + [node + self.nc for node in cur_attached_fringes]
+            else:
+                self.e2n[num_edge] = core_group
+

@@ -70,7 +70,7 @@ def main(target, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, seed, 
 
     # Step 4. Generate a hypergraph using seed_prob, theta_c, and theta_f.
     hypergraph = NoAH_cat(Fc, Ff, theta_c, theta_f, seed_prob, m, category_counts).e2n
-    dirname = "noah_cat"
+    dirname = "NoAH_categorical"
     os.makedirs(f"../generated/{dirname}/{target}", exist_ok=True)
     with open(f"../generated/{dirname}/{target}/{dirname}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
         for hyperedge in hypergraph:

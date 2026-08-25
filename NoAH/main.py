@@ -11,27 +11,14 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
     fix_seed(seed)
     
     print(mode)
-    if mode == "NoAH":
+    if mode in ["NoAH", "NoAH-dCF"]:
         # Step 1. Read target hypergraph and split a node set into core and fringes.
         hyperedges, attributes, n, m, k = prep_dataset(target)
 
-        if os.path.exists(f"core-fringe-split/{target}/{iter}"):
-            with open(f"core-fringe-split/{target}/{iter}/cores.txt", "r") as f:
-                cores = [int(i) for i in f.read().strip().split(",")]
-
-            with open(f"core-fringe-split/{target}/{iter}/fringes.txt", "r") as f:
-                fringes = [int(i) for i in f.read().strip().split(",")]
+        if mode == "NoAH":
+            cores, fringes = load_or_create_umhs_split(target, iter)
         else:
-            cores, fringes = UMHS(data_name = target, iter = iter)
-            os.makedirs(f"core-fringe-split/{target}/{iter}")
-
-            with open(f"core-fringe-split/{target}/{iter}/cores.txt", "w") as f:
-                core_to_write = [str(i) for i in cores]
-                f.write(",".join(core_to_write))
-            
-            with open(f"core-fringe-split/{target}/{iter}/fringes.txt", "w") as f:
-                fringe_to_write = [str(i) for i in fringes]
-                f.write(",".join(fringe_to_write))
+            cores, fringes = load_or_create_degree_size_matched_split(target, iter)
 
         nc = len(cores)
         nf = len(fringes)
@@ -40,41 +27,55 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
             
         # Step 2. Estimate seed_prob & theta_c by core group construction.
         Fc = attributes[cores]
+        Ic = torch.zeros(m, nc)
+        for edge_idx, nodes in enumerate(hyperedges):
+            for node in nodes:
+                if node in cores:
+                    Ic[edge_idx, cores.index(node)] = 1
+
+        if mode == "NoAH-dCF":
+            valid_edge_mask = torch.sum(Ic, dim=1) > 0
+            fit_edge_indices = torch.nonzero(valid_edge_mask, as_tuple=False).squeeze(1).tolist()
+            if len(fit_edge_indices) == 0:
+                raise ValueError(f"{mode} found zero covered hyperedges for {target}.")
+            Ic_fit = Ic[valid_edge_mask]
+            print(f"{mode} fitting uses {len(fit_edge_indices)}/{m} hyperedges with at least one core node.")
+        else:
+            fit_edge_indices = list(range(m))
+            Ic_fit = Ic
 
         if os.path.exists(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt"):
             seed_prob = torch.load(f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
             theta_c = torch.load(f"./parameters/{target}/{mode}/Tc-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
         else:
-            Ic = torch.zeros(m, nc)
-            for edge_idx, nodes in enumerate(hyperedges):
-                for node in nodes:
-                    if node in cores:
-                        Ic[edge_idx, cores.index(node)] = 1.  
-            theta_c, seed_prob = NoAHfit_core(Ic, Fc, epoch, lr_c, w_d, w_s, n_batch_c, seed, device)
+            theta_c, seed_prob = NoAHfit_core(Ic_fit, Fc, epoch, lr_c, w_d, w_s, n_batch_c, seed, device)
             os.makedirs(f"./parameters/{target}/{mode}", exist_ok=True)
             torch.save(seed_prob, f"./parameters/{target}/{mode}/seed_prob-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
             torch.save(theta_c, f"./parameters/{target}/{mode}/Tc-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
         
         # Step 3. Estimate theta_f by fringe attachment.
         Ff = attributes[fringes]
-
         if os.path.exists(f"./parameters/{target}/{mode}/Tf-{iter}-{epoch}-{lr_f}-{w_d}-{w_s}-{seed}.pt"):
             theta_f = torch.load(f"./parameters/{target}/{mode}/Tf-{iter}-{epoch}-{lr_f}-{w_d}-{w_s}-{seed}.pt")
         else:
-            If = torch.zeros(m, nf)
-            for edge_idx, nodes in enumerate(hyperedges):
+            If = torch.zeros(len(fit_edge_indices), nf)
+            for fit_idx, edge_idx in enumerate(fit_edge_indices):
+                nodes = hyperedges[edge_idx]
                 for node in nodes:
                     if node in fringes:
-                        If[edge_idx, fringes.index(node)] = 1.
+                        If[fit_idx, fringes.index(node)] = 1.
 
-            Fcg = torch.zeros((m, k), dtype=torch.float32)   
-            for edge_idx, nodes in enumerate(hyperedges):
+            Fcg = torch.zeros((len(fit_edge_indices), k), dtype=torch.float32)
+            for fit_idx, edge_idx in enumerate(fit_edge_indices):
+                nodes = hyperedges[edge_idx]
                 cur_cg = [node for node in nodes if node in cores]
+                if len(cur_cg) == 0:
+                    raise ValueError(f"Encountered uncovered hyperedge during fringe fitting in {mode}.")
                 if len(cur_cg) == 1:
-                    Fcg[edge_idx] = torch.FloatTensor(attributes[cur_cg[0]])
+                    Fcg[fit_idx] = torch.FloatTensor(attributes[cur_cg[0]])
                 else:
                     avg_attr = torch.mean(attributes[cur_cg, :], dim=0)
-                    Fcg[edge_idx] = torch.FloatTensor(avg_attr)
+                    Fcg[fit_idx] = torch.FloatTensor(avg_attr)
             theta_f = NoAHfit_fringe(If, Ff, Fcg, epoch, lr_f, w_d, w_s, n_batch_f, seed, device)
 
         os.makedirs(f"./parameters/{target}/{mode}", exist_ok=True)
@@ -83,8 +84,13 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
         # Step 4. Generate a hypergraph using seed_prob, theta_c, and theta_f.
         hypergraph = NoAH(Fc, Ff, theta_c, theta_f, seed_prob, m, mode).e2n
 
-        os.makedirs(f"../generated/{mode}/{target}", exist_ok=True)
-        with open(f"../generated/{mode}/{target}/{mode}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
+        if mode == "NoAH":
+            dirname = "NoAH"
+        else:
+            dirname = "NoAH_dCF"
+
+        os.makedirs(f"../generated/{dirname}/{target}", exist_ok=True)
+        with open(f"../generated/{dirname}/{target}/{mode}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt", "w") as f:
             for hyperedge in hypergraph:
                 cur = []
                 for node in hyperedge:
@@ -94,9 +100,9 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
                         cur.append(str(fringes[node - len(cores)]))
                 f.write(",".join(cur) + "\n")
         
-        reindexing(target, mode)
+        reindexing(target, dirname)
     
-    elif mode == "NoAH_CF":
+    elif mode == "NoAH_noCF":
         # Step 1. Read target hypergraph.
         hyperedges, attributes, n, m, k = prep_dataset(target)
         print(f'Target Hypergraph: {target}, n: {n}, m: {m}, k: {k}')
@@ -117,7 +123,7 @@ def main(target, mode, iter, epoch, lr_c, lr_f, w_d, w_s, n_batch_c, n_batch_f, 
             torch.save(theta, f"./parameters/{target}/{mode}/T-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
         
         # Step 3. Generate a hypergraph using seed_prob and theta.
-        hypergraph = NoAH_CF(attributes, theta, seed_prob, m).e2n
+        hypergraph = NoAH_noCF(attributes, theta, seed_prob, m).e2n
 
 
         os.makedirs(f"../generated/{mode}/{target}", exist_ok=True)
@@ -149,7 +155,7 @@ if __name__ == '__main__':
         default='NoAH',
         action="store",
         type=str,
-        help="Choose from [NoAH, NoAH_CF]."
+        help="Choose from [NoAH, NoAH_dCF, NoAH_noCF]."
     )
     
     parser.add_argument(

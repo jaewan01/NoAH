@@ -55,6 +55,67 @@ def prep_dataset(data_name):
             
     return hyperedges, attributes, num_nodes, num_edges, attr_dim
 
+def _read_core_fringe_split(split_dir):
+    cores_path = os.path.join(split_dir, "cores.txt")
+    fringes_path = os.path.join(split_dir, "fringes.txt")
+
+    with open(cores_path, "r") as f:
+        content = f.read().strip()
+        cores = [] if content == "" else [int(i) for i in content.split(",")]
+
+    with open(fringes_path, "r") as f:
+        content = f.read().strip()
+        fringes = [] if content == "" else [int(i) for i in content.split(",")]
+
+    return cores, fringes
+
+def _write_core_fringe_split(split_dir, cores, fringes):
+    os.makedirs(split_dir, exist_ok=True)
+
+    with open(os.path.join(split_dir, "cores.txt"), "w") as f:
+        f.write(",".join([str(i) for i in cores]))
+
+    with open(os.path.join(split_dir, "fringes.txt"), "w") as f:
+        f.write(",".join([str(i) for i in fringes]))
+
+def load_or_create_umhs_split(data_name, iter, split_root="core-fringe-split"):
+    split_dir = os.path.join(split_root, data_name, str(iter))
+
+    if os.path.exists(split_dir):
+        return _read_core_fringe_split(split_dir)
+
+    cores, fringes = UMHS(data_name=data_name, iter=iter)
+    _write_core_fringe_split(split_dir, cores, fringes)
+    return cores, fringes
+
+
+def load_or_create_degree_size_matched_split(data_name, iter, umhs_split_root="core-fringe-split", degree_split_root="core-fringe-split-degree"):
+    umhs_cores, umhs_fringes = load_or_create_umhs_split(data_name, iter, umhs_split_root)
+    hyperedges, _, num_nodes, _, _ = prep_dataset(data_name)
+    n = len(umhs_cores) + len(umhs_fringes)
+    if n != num_nodes:
+        raise ValueError(f"Node count mismatch for {data_name}: split has {n}, dataset has {num_nodes}.")
+    target_core_size = len(umhs_cores)
+
+    degree_split_dir = os.path.join(degree_split_root, data_name, str(iter))
+    if os.path.exists(degree_split_dir):
+        cores, fringes = _read_core_fringe_split(degree_split_dir)
+        if len(cores) == target_core_size and len(fringes) == (n - target_core_size):
+            return cores, fringes
+
+    degrees = np.zeros(n, dtype=np.int64)
+    for hyperedge in hyperedges:
+        for node in hyperedge:
+            degrees[node] += 1
+
+    ranked_nodes = sorted(range(n), key=lambda node: (-degrees[node], node))
+    cores = sorted(ranked_nodes[:target_core_size])
+    core_set = set(cores)
+    fringes = [node for node in range(n) if node not in core_set]
+    _write_core_fringe_split(degree_split_dir, cores, fringes)
+
+    return cores, fringes
+
 
 def UMHS(data_name, iter):
     

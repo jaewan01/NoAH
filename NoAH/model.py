@@ -48,7 +48,7 @@ class NoAH:
             if len(cur_attached_cores) > 0:
                 core_group.extend(cur_attached_cores)
 
-            if self.mode == "NoAH":
+            if self.mode in ["NoAH", "NoAH-dCF"]:
                 if len(core_group) > 1:
                     e2p = torch.mean(self.c2a[core_group], dim=0)
                 else:
@@ -72,10 +72,10 @@ class NoAH:
                 self.e2n[num_edge] = core_group
 
 
-class NoAH_CF:
+class NoAH_noCF:
     
     """
-        NoAH_CF is a single step version of NoAH, so it does not utilize core-fringe structure.
+        NoAH_noCF is a single step version of NoAH, so it does not utilize core-fringe structure.
     """
     
     def __init__(self, attr, affinity_matrix, seed_prob, edge_num):

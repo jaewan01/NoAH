@@ -1,4 +1,7 @@
-dataset=("cora_coauth")
+dataset=("contact_highschool" "contact_workspace")
+# dataset=("reviews_bluesmusic" "reviews_madisonrestaurant" "reviews_vegasbar")
+# dataset=("citeseer_cite" "cora_coauth")
+# dataset=("devops_stack" "patents_stack")
 seed=1
 epoch=500
 lr=0.01
@@ -49,7 +52,8 @@ do
         for ws in ${wsizeset[@]}
         do
             python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -lr_f ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_c} -n_batch_f ${n_batch_f} -device ${device} -mode "NoAH"
-            python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_bip} -device ${device} -mode "NoAH_CF"
+            python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_bip} -device ${device} -mode "NoAH_noCF"
+            python main.py -target ${data} -iter ${iter} -epoch ${epoch} -lr_c ${lr} -lr_f ${lr} -w_d ${wd} -w_s ${ws} -seed ${seed} -n_batch_c ${n_batch_c} -n_batch_f ${n_batch_f} -device ${device} -mode "NoAH-dCF"
         done
     done
 done

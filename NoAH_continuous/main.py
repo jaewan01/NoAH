@@ -81,7 +81,7 @@ def main(
             torch.save(betas, f"./parameters/{target}/{mode}/betas-{iter}-{epoch}-{lr_c}-{w_d}-{w_s}-{seed}.pt")
 
         # Step 3. Generate a hypergraph using seed_prob, theta_c, and theta_f.
-        dirname = "noah_continuous"
+        dirname = "NoAH_continuous"
         if not os.path.exists(f"../generated/{dirname}/{target}/{dirname}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt"):
             hypergraph = NoAH_continuous(Fc, Ff, theta_c, theta_f, alphas, betas, seed_prob, m).e2n
             os.makedirs(f"../generated/{dirname}/{target}", exist_ok=True)
@@ -183,7 +183,7 @@ def main(
             torch.save(fringe_mlp_ckpt, fringe_mlp_path)
         
         # Step 3. Generate a hypergraph using neural interaction modules.
-        dirname = "noah_neural"
+        dirname = "NoAH_neural"
         output_path = f"../generated/{dirname}/{target}/{dirname}-{iter}-{lr_c}-{lr_f}-{w_d}-{w_s}-{epoch}-{seed}-preindexing.txt"
         if not os.path.exists(output_path):
             hypergraph = NoAH_neural(Fc, Ff, core_mlp_ckpt, fringe_mlp_ckpt, seed_prob, m, mode).e2n
